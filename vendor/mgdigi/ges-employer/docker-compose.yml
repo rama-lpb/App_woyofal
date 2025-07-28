@@ -5,7 +5,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: php_fpm_app
+    container_name: php_fpm_woyofal
     volumes:
       - .:/app
     env_file:
@@ -15,7 +15,7 @@ services:
 
   nginx:
     image: nginx:latest
-    container_name: nginx_app
+    container_name: nginx_woyofal
     ports:
       - "8088:80"
     volumes:
