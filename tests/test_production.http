@@ -1,0 +1,101 @@
+### Tests pour l'API Woyofal en production sur Render
+### URL: https://ges-employer-php-fpm-1-0-0.onrender.com
+
+### 1. Test de santé de l'API
+GET https://ges-employer-php-fpm-1-0-0.onrender.com/api_production.php?action=status
+Content-Type: application/json
+
+###
+
+### 2. Obtenir les tranches de prix SENELEC
+GET https://ges-employer-php-fpm-1-0-0.onrender.com/api_production.php?action=tranches
+Content-Type: application/json
+
+###
+
+### 3. Vérifier les informations d'un compteur valide
+GET https://ges-employer-php-fpm-1-0-0.onrender.com/api_production.php?action=compteur&numero=123456789
+Content-Type: application/json
+
+###
+
+### 4. Achat de crédit - Petite consommation (Tranche sociale)
+POST https://ges-employer-php-fpm-1-0-0.onrender.com/api_production.php?action=achat-credit
+Content-Type: application/json
+
+{
+    "compteur": "123456789",
+    "montant": 3000
+}
+
+###
+
+### 5. Achat de crédit - Consommation moyenne (Multi-tranches)
+POST https://ges-employer-php-fpm-1-0-0.onrender.com/api_production.php?action=achat-credit
+Content-Type: application/json
+
+{
+    "compteur": "987654321",
+    "montant": 10000
+}
+
+###
+
+### 6. Achat de crédit - Grosse consommation (Toutes tranches)
+POST https://ges-employer-php-fpm-1-0-0.onrender.com/api_production.php?action=achat-credit
+Content-Type: application/json
+
+{
+    "compteur": "555666777",
+    "montant": 25000
+}
+
+###
+
+### 7. Test d'erreur - Compteur inexistant
+GET https://ges-employer-php-fpm-1-0-0.onrender.com/api_production.php?action=compteur&numero=999999999
+Content-Type: application/json
+
+###
+
+### 8. Test d'erreur - Achat avec compteur inexistant
+POST https://ges-employer-php-fpm-1-0-0.onrender.com/api_production.php?action=achat-credit
+Content-Type: application/json
+
+{
+    "compteur": "999999999",
+    "montant": 5000
+}
+
+###
+
+### 9. Test d'erreur - Montant trop faible
+POST https://ges-employer-php-fpm-1-0-0.onrender.com/api_production.php?action=achat-credit
+Content-Type: application/json
+
+{
+    "compteur": "123456789",
+    "montant": 50
+}
+
+###
+
+### 10. Test d'erreur - Paramètres manquants
+POST https://ges-employer-php-fpm-1-0-0.onrender.com/api_production.php?action=achat-credit
+Content-Type: application/json
+
+{
+    "compteur": "123456789"
+}
+
+###
+
+### 11. Test CORS - Requête OPTIONS
+OPTIONS https://ges-employer-php-fpm-1-0-0.onrender.com/api_production.php?action=achat-credit
+Content-Type: application/json
+
+###
+
+### 12. Test endpoint santé pour monitoring
+GET https://ges-employer-php-fpm-1-0-0.onrender.com/api_production.php?action=health
+Content-Type: application/json

@@ -1,0 +1,95 @@
+### Test de l'API Woyofal (Configuration Docker Nginx)
+### Utilisez l'extension REST Client de VSCode pour exécuter ces tests
+### Port: 8088 (Nginx Docker)
+
+### 1. Test de santé de l'API
+GET http://localhost:8088/api_standalone.php?action=status
+Content-Type: application/json
+
+###
+
+### 2. Obtenir les tranches de prix
+GET http://localhost:8088/api_standalone.php?action=tranches
+Content-Type: application/json
+
+###
+
+### 3. Vérifier les informations d'un compteur
+GET http://localhost:8088/api_standalone.php?action=compteur&numero=123456789
+Content-Type: application/json
+
+###
+
+### 4. Achat de crédit - Cas de succès (Tranche sociale)
+POST http://localhost:8088/api_standalone.php?action=achat-credit
+Content-Type: application/json
+
+{
+    "compteur": "123456789",
+    "montant": 5000
+}
+
+###
+
+### 5. Achat de crédit - Tranche élevée
+POST http://localhost:8088/api_standalone.php?action=achat-credit
+Content-Type: application/json
+
+{
+    "compteur": "123456789",
+    "montant": 20000
+}
+
+###
+
+### 6. Test d'erreur - Compteur non trouvé
+POST http://localhost:8088/api_standalone.php?action=achat-credit
+Content-Type: application/json
+
+{
+    "compteur": "999999999",
+    "montant": 5000
+}
+
+###
+
+### 7. Test d'erreur - Montant invalide
+POST http://localhost:8088/api_standalone.php?action=achat-credit
+Content-Type: application/json
+
+{
+    "compteur": "123456789",
+    "montant": -100
+}
+
+###
+
+### 8. Test d'erreur - Paramètres manquants
+POST http://localhost:8088/api_standalone.php?action=achat-credit
+Content-Type: application/json
+
+{
+    "montant": 5000
+}
+
+###
+
+### 9. Test avec l'ancienne API (pour comparaison)
+POST http://localhost:8088/api.php
+Content-Type: application/json
+
+{
+    "compteur": "123456789",
+    "solde": 10000,
+    "montant": 5000
+}
+
+###
+
+### 10. Test de l'API index.php
+POST http://localhost:8088/index.php
+Content-Type: application/json
+
+{
+    "montant": 5000
+}

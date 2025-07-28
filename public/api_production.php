@@ -1,7 +1,7 @@
 <?php
 /**
- * Point d'entrée principal pour l'API Woyofal sur Render
- * Route toutes les requêtes vers l'API
+ * API Woyofal pour production sur Render
+ * Version sans warnings PHP qui causent les erreurs de headers
  */
 
 // Désactiver l'affichage des erreurs en production
@@ -20,13 +20,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
+// Buffer de sortie pour éviter les problèmes de headers
+ob_start();
+
 try {
     $method = $_SERVER['REQUEST_METHOD'];
-    $action = $_GET['action'] ?? $_POST['action'] ?? 'status';
+    $action = $_GET['action'] ?? 'status';
     
     switch ($method . ':' . $action) {
         case 'POST:achat-credit':
-            // Achat de crédit
+            // Logique d'achat de crédit
             $input = json_decode(file_get_contents('php://input'), true);
             
             if (!$input || !isset($input['compteur'], $input['montant'])) {
@@ -37,7 +40,7 @@ try {
                     'code' => 422,
                     'message' => 'Paramètres compteur et montant obligatoires'
                 ]);
-                exit;
+                break;
             }
             
             $compteur = trim($input['compteur']);
@@ -52,7 +55,7 @@ try {
                     'code' => 422,
                     'message' => 'Le numéro de compteur ne peut pas être vide'
                 ]);
-                exit;
+                break;
             }
             
             if ($montant <= 0) {
@@ -63,7 +66,7 @@ try {
                     'code' => 400,
                     'message' => 'Le montant doit être supérieur à 0'
                 ]);
-                exit;
+                break;
             }
             
             if ($montant < 100) {
@@ -74,7 +77,7 @@ try {
                     'code' => 400,
                     'message' => 'Le montant minimum est de 100 FCFA'
                 ]);
-                exit;
+                break;
             }
             
             // Simulation de vérification de compteur
@@ -87,31 +90,47 @@ try {
                     'code' => 404,
                     'message' => 'Le numéro de compteur n\'a pas été trouvé'
                 ]);
-                exit;
+                break;
             }
             
             // Calcul des tranches SENELEC
             $kwh = 0;
             $tranche = '';
             $prix_moyen = 0;
+            $details_tranches = [];
             
             if ($montant <= 5000) {
+                // Tranche 1 uniquement
                 $kwh = $montant / 85;
                 $tranche = 'Tranche sociale';
                 $prix_moyen = 85;
+                $details_tranches = [
+                    ['tranche' => 1, 'montant' => $montant, 'kwh' => $kwh, 'prix' => 85]
+                ];
             } elseif ($montant <= 15000) {
+                // Tranches 1 + 2
                 $kwh1 = 5000 / 85;
                 $kwh2 = ($montant - 5000) / 95;
                 $kwh = $kwh1 + $kwh2;
                 $tranche = 'Tranche normale';
                 $prix_moyen = $montant / $kwh;
+                $details_tranches = [
+                    ['tranche' => 1, 'montant' => 5000, 'kwh' => $kwh1, 'prix' => 85],
+                    ['tranche' => 2, 'montant' => ($montant - 5000), 'kwh' => $kwh2, 'prix' => 95]
+                ];
             } else {
+                // Tranches 1 + 2 + 3
                 $kwh1 = 5000 / 85;
                 $kwh2 = 10000 / 95;
                 $kwh3 = ($montant - 15000) / 110;
                 $kwh = $kwh1 + $kwh2 + $kwh3;
                 $tranche = 'Tranche élevée';
                 $prix_moyen = $montant / $kwh;
+                $details_tranches = [
+                    ['tranche' => 1, 'montant' => 5000, 'kwh' => $kwh1, 'prix' => 85],
+                    ['tranche' => 2, 'montant' => 10000, 'kwh' => $kwh2, 'prix' => 95],
+                    ['tranche' => 3, 'montant' => ($montant - 15000), 'kwh' => $kwh3, 'prix' => 110]
+                ];
             }
             
             // Génération des codes
@@ -138,7 +157,8 @@ try {
                     'tranche' => $tranche,
                     'prix' => round($prix_moyen, 2),
                     'nbreKwt' => round($kwh, 2),
-                    'client' => $nom_client
+                    'client' => $nom_client,
+                    'details_calcul' => $details_tranches
                 ],
                 'statut' => 'success',
                 'code' => 200,
@@ -156,13 +176,14 @@ try {
                     'code' => 400,
                     'message' => 'Le paramètre "numero" est requis'
                 ]);
-                exit;
+                break;
             }
             
+            // Simulation compteurs existants
             $compteurs_db = [
-                '123456789' => ['client' => 'Jean Dupont', 'adresse' => 'Dakar', 'consommation' => 3500],
-                '987654321' => ['client' => 'Marie Ndiaye', 'adresse' => 'Thiès', 'consommation' => 8200],
-                '555666777' => ['client' => 'Abdou Ba', 'adresse' => 'Saint-Louis', 'consommation' => 12500]
+                '123456789' => ['client' => 'Jean Dupont', 'adresse' => 'Dakar Plateau', 'consommation' => 3500],
+                '987654321' => ['client' => 'Marie Ndiaye', 'adresse' => 'Guédiawaye', 'consommation' => 8200],
+                '555666777' => ['client' => 'Abdou Ba', 'adresse' => 'Pikine', 'consommation' => 12500]
             ];
             
             if (!isset($compteurs_db[$numero])) {
@@ -173,17 +194,24 @@ try {
                     'code' => 404,
                     'message' => 'Le numéro de compteur n\'a pas été trouvé'
                 ]);
-                exit;
+                break;
             }
             
             $compteur_info = $compteurs_db[$numero];
+            
+            http_response_code(200);
             echo json_encode([
                 'data' => [
                     'compteur' => $numero,
                     'client' => $compteur_info['client'],
                     'adresse' => $compteur_info['adresse'],
                     'actif' => true,
-                    'consommation_mois' => $compteur_info['consommation']
+                    'consommation_mois' => $compteur_info['consommation'],
+                    'tranches_disponibles' => [
+                        ['niveau' => 1, 'seuil_max' => 5000, 'prix_kwh' => 85, 'description' => 'Tranche sociale'],
+                        ['niveau' => 2, 'seuil_max' => 15000, 'prix_kwh' => 95, 'description' => 'Tranche normale'],
+                        ['niveau' => 3, 'seuil_max' => 0, 'prix_kwh' => 110, 'description' => 'Tranche élevée']
+                    ]
                 ],
                 'statut' => 'success',
                 'code' => 200,
@@ -192,36 +220,50 @@ try {
             break;
             
         case 'GET:tranches':
+            http_response_code(200);
             echo json_encode([
                 'data' => [
-                    ['niveau' => 1, 'seuil_min' => 0, 'seuil_max' => 5000, 'prix_kwh' => 85, 'description' => 'Tranche sociale'],
-                    ['niveau' => 2, 'seuil_min' => 5001, 'seuil_max' => 15000, 'prix_kwh' => 95, 'description' => 'Tranche normale'],
-                    ['niveau' => 3, 'seuil_min' => 15001, 'seuil_max' => 0, 'prix_kwh' => 110, 'description' => 'Tranche élevée']
+                    ['niveau' => 1, 'seuil_min' => 0, 'seuil_max' => 5000, 'prix_kwh' => 85, 'description' => 'Tranche sociale - Pour les ménages à faible consommation'],
+                    ['niveau' => 2, 'seuil_min' => 5001, 'seuil_max' => 15000, 'prix_kwh' => 95, 'description' => 'Tranche normale - Pour la consommation standard'],
+                    ['niveau' => 3, 'seuil_min' => 15001, 'seuil_max' => 0, 'prix_kwh' => 110, 'description' => 'Tranche élevée - Pour les gros consommateurs']
                 ],
                 'statut' => 'success',
                 'code' => 200,
-                'message' => 'Tranches tarifaires récupérées'
+                'message' => 'Tranches tarifaires SENELEC récupérées avec succès'
             ]);
             break;
             
         case 'GET:status':
+        case 'GET:health':
         default:
+            http_response_code(200);
             echo json_encode([
                 'data' => [
                     'service' => 'Woyofal API',
-                    'version' => '2.0',
+                    'version' => '2.0-production',
                     'timestamp' => date('Y-m-d H:i:s'),
                     'status' => 'operational',
-                    'environment' => 'production'
+                    'environment' => 'production',
+                    'server' => 'Render',
+                    'endpoints' => [
+                        'POST ?action=achat-credit' => 'Acheter du crédit électrique',
+                        'GET ?action=compteur&numero=XXX' => 'Informations compteur',
+                        'GET ?action=tranches' => 'Tranches tarifaires',
+                        'GET ?action=status' => 'Statut du service'
+                    ],
+                    'contact' => 'API Woyofal - Système de prépaiement électrique'
                 ],
                 'statut' => 'success',
                 'code' => 200,
-                'message' => 'API Woyofal opérationnelle'
+                'message' => 'Service Woyofal opérationnel sur Render'
             ]);
             break;
     }
     
 } catch (Exception $e) {
+    // Log l'erreur en production (vous pouvez ajouter un système de log)
+    error_log("Woyofal API Error: " . $e->getMessage());
+    
     http_response_code(500);
     echo json_encode([
         'data' => null,
@@ -229,5 +271,19 @@ try {
         'code' => 500,
         'message' => 'Erreur interne du serveur'
     ]);
+} catch (Error $e) {
+    // Gestion des erreurs fatales
+    error_log("Woyofal API Fatal Error: " . $e->getMessage());
+    
+    http_response_code(500);
+    echo json_encode([
+        'data' => null,
+        'statut' => 'error',
+        'code' => 500,
+        'message' => 'Erreur critique du serveur'
+    ]);
 }
+
+// Vider le buffer et envoyer la réponse
+ob_end_flush();
 ?>

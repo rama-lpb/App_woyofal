@@ -1,5 +1,12 @@
 <?php
+namespace App\Controller;
 
+
+
+
+class paiementController {
+
+public function getinfos (){
 $inputJSON = file_get_contents('php://input');
 $input = json_decode($inputJSON, true);
 var_dump($input);
@@ -38,3 +45,5 @@ echo json_encode([
     'message' => 'Données reçues avec succès'
 ]);
 exit;
+}
+}
