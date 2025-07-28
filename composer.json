@@ -1,0 +1,24 @@
+{
+    "name": "rama/woyofal",
+    "description": "appli tierce gestion courant maxit",
+    "autoload": {
+        "psr-4": {
+            "Rama\\Woyofal\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "rama"
+        }
+    ],
+    "minimum-stability": "dev",
+    "require": {
+        "mgdigi/ges-employer": "dev-main"
+    },
+
+    "scripts": {
+      "migrate": "php App/run-migration.php",
+      "seeder": "php App/run-seeder.php"
+
+    }
+}
